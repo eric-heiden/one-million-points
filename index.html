@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Points</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+	body {
+		color: #ffffff;
+		font-family: Monospace;
+		font-size: 13px;
+		text-align: center;
+		font-weight: bold;
+		background-color: #333333;
+		margin: 0px;
+		overflow: hidden;
+	}
+
+	#info {
+		position: absolute;
+		bottom: 0px;
+		width: 100%;
+		padding: 5px;
+	}
+
+	#fileselect {
+		position: fixed;
+		top: 50%;
+		margin-top: -50px;
+		height: 100px;
+		padding: 35px 15px;
+		background: #666;
+		border-radius: 20px;
+		text-align: center;
+		width: 400px;
+		left: 50%;
+		margin-left: -200px;
+		box-sizing: border-box;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+	}
+
+	a {
+		color: #ffffff;
+	}
+
+	#oldie a {
+		color: #da0;
+	}
+
+	#notSupported {
+		width: 50%;
+		margin: auto;
+		border: 2px red solid;
+		margin-top: 20px;
+		padding: 10px;
+	}
+</style>
+<link rel
+</head>
+<body>
+
+	<div id="container"></div>
+	<div id="info">
+		<p id="fileselect">
+			<label for="fileopener">Open points...</label> <input type="file" id="fileopener" onchange="loadPoints()" accept=".csv" />
+		</p>
+		<div id="notSupported" style="display:none">Sorry your graphics card + browser does not support hardware instancing</div>
+	</div>
+
+	<script src="js/three.min.js"></script>
+
+	<script src="js/Detector.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="js/FirstPersonControls.js"></script>
+	<script src="js/stats.min.js"></script>
+	<script src="js/dat.gui.min.js"></script>
+
+	<script>
+		if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+		var container, stats;
+		var camera, scene, renderer, mesh, controls;
+		
+		var pointsGeometry = new THREE.Geometry();
+
+		var lastTime = 0;
+
+		var points = [];
+		var xMin;
+		var xMax;
+		var yMin;
+		var yMax;
+		var zMin;
+		var zMax;
+
+		var delimiter = '\t';
+
+		function loadPoints() {
+			var reader  = new FileReader();
+			reader.addEventListener("load", function (e) {
+				var csv = e.target.result;
+				var allTextLines = csv.split(/\r\n|\n/);
+		        for (var i=0; i<allTextLines.length; i++) {
+		            var data = allTextLines[i].split(delimiter);
+		            if (isNaN(data[0]) || isNaN(data[1]) || isNaN(data[2]))
+		            	continue;
+
+		            var point = new THREE.Vector3();
+		            point.x = parseFloat(data[0]);
+		            point.y = parseFloat(data[1]);
+		            point.z = parseFloat(data[2]);
+		            pointsGeometry.vertices.push( point );
+
+		            if (i == 0)
+		            {
+		            	xMin = point.x;
+		            	xMax = point.x;
+		            	yMin = point.y;
+		            	yMax = point.y;
+		            	zMin = point.z;
+		            	zMax = point.z;
+		            }
+		            else
+		            {
+		            	xMin = Math.min(point.x, xMin);
+		            	xMax = Math.max(point.x, xMax);
+		            	yMin = Math.min(point.y, yMin);
+		            	yMax = Math.max(point.y, yMax);
+		            	zMin = Math.min(point.z, zMin);
+		            	zMax = Math.max(point.z, zMax);
+		            }
+		        }
+
+				document.getElementById("info").innerHTML = '<p>Visualizing '
+				+ String(allTextLines.length)
+				+ " points</p>";
+				// setTimeout(function() {
+				// 	var element = document.getElementById("info");
+				// 	element.outerHTML = "";
+				// 	delete element;
+				// }, 8000);
+
+				console.log("xMin:", xMin);
+				console.log("xMax:", xMax);
+				console.log("yMin:", yMin);
+				console.log("yMax:", yMax);
+				console.log("zMin:", zMin);
+				console.log("zMax:", zMax);
+
+				init();
+				animate();
+
+			}, false);
+			reader.readAsText(document.getElementById("fileopener").files[0]);
+		}
+
+		var clock;
+		var geometry;
+		function init() {
+			var gui = new dat.GUI({
+				height : 5 * 32 - 1,
+				width: 300
+			});
+
+
+			clock = new THREE.Clock();
+
+			container = document.getElementById( 'container' );
+
+			camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.001, 1000 );
+			camera.position.z = 20;
+
+			scene = new THREE.Scene();
+			scene.background = new THREE.Color( 0x888888 );
+			var pointsMaterial = new THREE.PointsMaterial( { color: 0xffffff, size: 0.05, transparent: true, opacity: 0.3 } );
+			var pointField = new THREE.Points( pointsGeometry, pointsMaterial );
+
+			scene.add( pointField );
+
+
+			var params = {
+				showAxes: true,
+				showBoundingBox: true,
+				screenshot: function() {
+					renderer.render(scene, camera);
+					var imgData = renderer.domElement.toDataURL();
+					// var imgNode = document.createElement("img");
+					// imgNode.src = imgData;
+					var element = document.createElement("a");
+					element.setAttribute('href', imgData); // 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+					element.setAttribute('download', 'screenshot.png');
+
+					element.style.display = 'none';
+					document.body.appendChild(element);
+
+					element.click();
+				},
+				backgroundColor: "#888888"
+			};
+
+			gui.add(params, 'screenshot');
+			var rendering = gui.addFolder("Rendering");
+			rendering.addColor(params, 'backgroundColor').onChange( function( v )
+			{
+				scene.background = new THREE.Color(v);
+			});
+
+			var cube = new THREE.LineSegments( 
+				new THREE.EdgesGeometry(new THREE.CubeGeometry( xMax-xMin, yMax-yMin, zMax-zMin )), 
+				new THREE.LineBasicMaterial( {
+					color: 0xff8010
+				} )
+				);
+			cube.translateX((xMax+xMin)/2.);
+			cube.translateY((yMax+yMin)/2.);
+			cube.translateZ((zMax+zMin)/2.);
+			camera.lookAt((xMax+xMin)/2., (yMax+yMin)/2., (zMax+zMin)/2.)
+
+			scene.add(cube);
+			rendering.add(params, 'showBoundingBox').onChange( function( showBoundingBox  )
+			{
+				cube.visible = showBoundingBox;
+			});
+
+			var axesHelper = new THREE.AxesHelper( 5 );
+			axesHelper.rotation.x = -Math.PI/2.;
+			axesHelper.scale.y = -1;
+
+			scene.add(axesHelper);
+
+			rendering.add(params, 'showAxes').onChange( function( showAxes  )
+			{
+				axesHelper.visible = showAxes;
+			});
+
+			gui.remember(params);
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			controls = new THREE.OrbitControls( camera, renderer.domElement );
+			// controls.lookSpeed = 0.04;
+	  //       controls.movementSpeed = 1;
+	  //       controls.noFly = true;
+	  //       controls.lookVertical = true;
+	  //       controls.constrainVertical = true;
+	  //       controls.verticalMin = 1.0;
+	  //       controls.verticalMax = 2.0;
+	  //       controls.lon = 250;
+	  //       controls.lat = 120;
+	  //       controls.activeLook = false;
+
+	  container.appendChild( renderer.domElement );
+
+	  if ( renderer.extensions.get( 'ANGLE_instanced_arrays' ) === false ) {
+
+	  	document.getElementById( 'notSupported' ).style.display = '';
+	  	return;
+
+	  }
+
+	  stats = new Stats();
+	  container.appendChild( stats.dom );
+
+	  window.addEventListener( 'resize', onWindowResize, false );
+
+	}
+
+	function onWindowResize( event ) {
+
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+
+		renderer.setSize( window.innerWidth, window.innerHeight );
+
+	}
+
+	function animate() {
+		var delta = clock.getDelta();
+		controls.update(delta);
+
+		requestAnimationFrame( animate );
+
+		render();
+		stats.update();
+
+	}
+
+	function render() {
+		var time = performance.now();
+
+		lastTime = time;
+
+		renderer.render( scene, camera );
+	}
+
+	function screenshot() {
+		renderer.render(scene, camera);
+		var imgData = renderer.domElement.toDataURL();
+		// var imgNode = document.createElement("img");
+		// imgNode.src = imgData;
+		element.setAttribute('href', imgData); // 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+		element.setAttribute('download', filename);
+
+		element.style.display = 'none';
+		document.body.appendChild(element);
+
+		element.click();
+	}
+</script>
+</body>
+</html>
