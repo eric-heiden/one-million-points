@@ -100,6 +100,7 @@
 			reader.addEventListener("load", function (e) {
 				var csv = e.target.result;
 				var allTextLines = csv.split(/\r\n|\n/);
+				var pcounter = 0;
 		        for (var i=0; i<allTextLines.length; i++) {
 		            var data = allTextLines[i].split(delimiter);
 		            if (isNaN(data[0]) || isNaN(data[1]) || isNaN(data[2]))
@@ -109,7 +110,12 @@
 		            point.x = parseFloat(data[0]);
 		            point.y = parseFloat(data[2]);
 		            point.z = parseFloat(data[1]);
+		            if (point.x < -1e10 || point.x > 1e10 ||
+		            	point.y < -1e10 || point.y > 1e10 ||
+		            	point.z < -1e10 || point.z > 1e10)
+		            	continue;
 		            pointsGeometry.vertices.push( point );
+		            ++pcounter;
 
 		            if (isNaN(xMin))
 		            {
@@ -132,7 +138,7 @@
 		        }
 
 				document.getElementById("info").innerHTML = '<p>Visualizing '
-				+ String(allTextLines.length)
+				+ String(pcounter)
 				+ " points</p>";
 				// setTimeout(function() {
 				// 	var element = document.getElementById("info");
