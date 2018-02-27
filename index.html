@@ -86,7 +86,7 @@
 		var lastTime = 0;
 
 		var points = [];
-		var xMin;
+		var xMin = "nan";
 		var xMax;
 		var yMin;
 		var yMax;
@@ -111,7 +111,7 @@
 		            point.z = parseFloat(data[1]);
 		            pointsGeometry.vertices.push( point );
 
-		            if (i == 0)
+		            if (isNaN(xMin))
 		            {
 		            	xMin = point.x;
 		            	xMax = point.x;
@@ -195,7 +195,7 @@
 
 					element.click();
 				},
-				backgroundColor: "#888888"
+				backgroundColor: "#000000"
 			};
 
 			gui.add(params, 'screenshot');
