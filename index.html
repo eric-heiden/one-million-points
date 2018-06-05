@@ -200,7 +200,10 @@
 
 					element.click();
 				},
-				backgroundColor: "#000000"
+				backgroundColor: "#000000",
+				foregroundColor: "#ffffff",
+				size: 0.05,
+				opacity: 0.3
 			};
 
 			gui.add(params, 'screenshot');
@@ -208,6 +211,18 @@
 			rendering.addColor(params, 'backgroundColor').onChange( function( v )
 			{
 				scene.background = new THREE.Color(v);
+			});
+			rendering.addColor(params, 'foregroundColor').onChange( function( v )
+			{
+				pointsMaterial.color = new THREE.Color(v);
+			});
+			rendering.add(params, 'size').min(0.001).max(0.3).step(0.005).onChange( function( v )
+			{
+				pointsMaterial.size = v;
+			});
+			rendering.add(params, 'opacity').min(0.0).max(1.0).step(0.05).onChange( function( v )
+			{
+				pointsMaterial.opacity = v;
 			});
 
 			var cube = new THREE.LineSegments( 
